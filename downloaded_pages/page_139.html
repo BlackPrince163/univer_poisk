@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <title>Explain PostgreSQL</title>
+    <meta name="description" content="PostgreSQL Query Plan Visualizer">
+    <!--meta name="viewport" content="width=device-width, initial-scale=1.0"-->
+    <!-- Le styles -->
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Explain PostgreSQL">
+    <meta property="og:title" content="Explain PostgreSQL">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:description" content="PostgreSQL Query Plan Visualizer add new plan ">
+<!--&lt;!&ndash;    <meta property="og:description" content="PostgreSQL Query Plan Visualizer">&ndash;&gt;-->
+    <meta property="og:url" content="https://explain.tensor.ru/plan/">
+    <meta property="og:image" content="https://explain.tensor.ru/img/diag/explain.jpg" />
+    <meta property="vk:image" content="https://explain.tensor.ru/img/diag/explain.jpg" />
+    <meta property="twitter:image" content="https://explain.tensor.ru/img/diag/explain.jpg" />
+    <meta property="og:image:width" content="600" />
+    <meta property="og:image:height" content="315" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style type="text/css">
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+    </style>
+    <style type="text/css">
+      html {
+        font-family: 'Consolas', 'Lucida Console';
+        font-size: 14px;
+      }
+      body {
+        font-family: Trebuchet MS;
+      }
+
+      .bs-docs-sidenav.top > LI {
+        font-weight: bold;
+      }
+      .bs-docs-sidenav.top > * LI {
+        font-weight: normal;
+      }
+
+      SPAN.highlight {
+        color : #FC4000;
+      }
+      SPAN.lowlight {
+        color : #C0C0C0;
+      }
+
+      input.fltr-host {
+        width: 80%;
+        height: 16px;
+        margin: 3pt 0 3pt 3pt;
+        font-size:8pt !important;
+      }
+      button.fltr-host {
+        height: 25px;
+        width: 25px;
+        display: inline-block;
+        padding:2px 3px 3px 3px;
+        margin: 2px 0 5px 0;
+      }
+      DIV.task-icon-holder {
+        display: inline-block;
+      }
+      /*-------- table in modal window  ---------*/
+      TR.modal-line {
+        font-size: 8pt;
+      }
+      TR.modal-line:hover .icons-holder {
+        visibility: visible;
+      }
+
+      TD.duration{
+        width: 70px;
+        padding: 8px 0px;
+      }
+
+      TD.remove-icon-hld {
+        text-align: left;
+        padding: 6px 0px;
+      }
+      .addbtn { /* modal window */
+        width: 23px;
+        height: 23px;
+        margin-bottom: 11px;
+        /*margin-left: 4px;*/
+        padding: 5px 2px 1px 4px;
+        border: 1px solid #ccc;
+      }
+
+      .datepicker-days {
+        /*z-index: 1600 !important; !* has to be larger than 1050 *!*/
+        font-family: Consolas;
+        font-size: 10pt;
+        padding: 4px 8px 4px 8px;
+        text-align: right;
+      }
+      .navbar-nav .active  {
+        background-color: rgba(0,0,0,.04);
+      }
+
+      a.nav-link {
+        color: #08c;
+      }
+      .custom-nav{
+        height: 3.5rem;
+      }
+
+      .custom-link {
+        padding-top: 1rem !important;
+        line-height: 1.5rem !important;
+      }
+      .popover{
+        max-width: 100%!important; /* Max Width of the popover (depending on the container!) */
+      }
+      .donate-txt{
+        font-size: 11pt;
+        margin-bottom: 0;
+      }
+      @media all and (min-width: 992px) {
+        .navbar .nav-item .dropdown-menu{ display: none; }
+        .navbar .nav-item:hover .nav-link{   }
+        .navbar .nav-item:hover .dropdown-menu{ display: block; }
+        .navbar .nav-item .dropdown-menu{ margin-top:0; }
+      }	
+    </style>
+    <link href="/css/bootstrap-block.css" rel="stylesheet"/>
+    <link href="/css/bootstrap-datepicker.css" rel="stylesheet"/>
+    <link href="/css/font-awesome.min.css" rel="stylesheet"/>
+    <link href="/css/ubuntumono.css" rel="stylesheet" />
+    <link href="/css/bootstrap-grid.css" rel="stylesheet"/>
+    <link href="/css/bootstrap-reboot.css" rel="stylesheet"/>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/exo2.css" rel="stylesheet"/>
+    <link href="/css/sharingbuttons.css" rel="stylesheet"/>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+     <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+     <script src="/js/ecma-fix.js"></script>
+    <![endif]-->
+    <link rel="icon" type="image/png" href="/img/favicon.png"/>
+    <!-- Le fav and touch icons -->
+    <!--    <link rel="shortcut icon" href="/ico/favicon.ico">-->
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript" >
+      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+      (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+      ym(95423632, "init", {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true
+      });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/95423632" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+  </head>
+  <body class = "py-0" >
+  <nav class="navbar navbar-expand-sm navbar-light bg-light py-0" style="font-size: .9rem;">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand" href="/about/">Explain PostgreSQL</a>
+    
+      <a class="navbar-brand" href="https://demo-explain.tensor.ru/query/dashboard/" target="_blank"  title="больше возможностей">
+        <img width="28px" height="28px" src="/img/demo.png" >
+      </a>
+    
+
+    <ul class="navbar-nav mr-auto custom-nav" >
+      <li class="nav-item px-3">
+        <a class="nav-link custom-link" href="/plan/" >Новый план</a>
+      </li>
+      <li class="nav-item  px-3">
+        <a class="nav-link custom-link" href="/archive/" >Архив</a>
+      </li>
+      <li  class="nav-item  px-3">
+        <a class="nav-link custom-link " href="/beautifier/" >Нормализовать запрос</a>
+      </li>
+    </ul>
+
+    <ul class="navbar-nav custom-nav justify-content-end">
+      <li  class="nav-item px-3">
+        
+          <div id="donate" >
+            <a class="nav-link custom-link" href="https://pay.cloudtips.ru/p/4410bda2" target="_blank"  >
+              <svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="30.000000px" height="30.000000px" viewBox="0 0 90.000000 90.000000" preserveAspectRatio="xMidYMid meet" style="margin-top: -0.5rem;">
+                <g transform="translate(0.000000,90.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="none">
+                  <path fill="#C0C0C0" d="M404 856 c-11 -8 -45 -16 -75 -18 -53 -3 -54 -4 -53 -33 1 -16 7 -42 13 -57 l11 -28 150 0 150 0 11 28 c6 15 12 41 13 57 1 29 0 30 -53 33 -30 2 -64 10 -75 18 -11 8 -32 14 -46 14 -14 0 -35 -6 -46 -14z"/>
+                  <path fill="#C0C0C0" d="M233 590 c-135 -163 -177 -327 -110 -429 44 -67 64 -71 327 -71 263 0 283 4 327 71 67 102 25 265 -110 429 l-58 70 -159 0 -159 0 -58 -70z m306 -65 c57 -29 65 -119 16 -165 -18 -17 -40 -25 -80 -28 -38 -3 -55 -9 -55 -18 0 -9 11 -14 30 -14 20 0 30 -5 30 -15 0 -10 -10 -15 -30 -15 -27 0 -30 -3 -30 -30 0 -27 -3 -30 -30 -30 -27 0 -30 3 -30 30 0 27 -3 30 -30 30 -20 0 -30 5 -30 15 0 10 10 15 30 15 20 0 30 5 30 15 0 10 -10 15 -30 15 -20 0 -30 5 -30 15 0 10 10 15 30 15 l30 0 0 90 0 90 75 0 c47 0 87 -6 104 -15z"/>
+                  <path fill="#C0C0C0" d="M420 434 l0 -57 41 6 c50 7 62 17 62 53 0 34 -26 54 -70 54 l-33 0 0 -56z"/>
+                </g>
+              </svg>
+              Поддержать
+            </a>
+          </div>
+        
+      </li>
+      <li id = 'dtpc'  class="nav-item px-3" >
+            <button class="btn btn-secondary mt-2" id="datepicker" data-date-format="dd.mm.yyyy"/>
+      </li>
+      
+        <li class="nav-item  px-3 dropdown">
+          <a class="nav-link custom-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false" onclick="window.location.pathname='/downloads-packages/';">
+            Download
+          </a>
+          <div class="dropdown-menu">
+            <a class="dropdown-item" href="/downloads-packages/">Self-hosted</a>
+            <a class="dropdown-item" href="/downloads-plugins/">Plugins</a>
+          </div>
+        </li>
+        <!-- <li  class="nav-item px-3">
+          <a class="nav-link custom-link" href="/downloads-packages/" >Self-hosted</a>
+        </li> -->
+      
+      <li  class="nav-item px-3">
+        <a class="nav-link custom-link" href="/api-description/" >API</a>
+      </li>
+      <li  class="nav-item px-3">
+            <a class="nav-link custom-link" href="/about/" >О сервисе</a>
+          </li>
+        <li  class="nav-item px-3">
+          <div class="btn-group mt-2" role="group" aria-label="switch group">
+            <button id="sw-en" type="button" class="btn btn-outline-secondary lang-switch" data-locale="en">En</button>
+            <button id="sw-ru" type="button" class="btn btn-outline-secondary lang-switch" data-locale="ru">Ru</button>
+          </div>
+        </li>
+      </ul>
+  </nav>
+    <script src="/js/init.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/locale_en.js"></script>
+    <script>
+      (function() {
+        var cb = {};
+        var socket = io.connect('/api', {transports: ['websocket']});
+        socket.on('message', function(msg) {
+           if (typeof cb[msg.id] == 'function') {
+            cb[msg.id](msg.json);
+            delete cb[msg.id];
+          }
+        });
+
+        asyncWaitJQ(function() {
+          if(locale_src == 'en'){
+            $('#sw-en').addClass('active');
+          } else {
+            $('#sw-ru').addClass('active');
+          }
+
+          $('.lang-switch').click(function(e) {
+            e.preventDefault();
+            document.cookie = encodeURIComponent('locale') + '=' + encodeURIComponent($(this).data('locale'))+";path=/; SameSite=None; Secure";
+            document.location.reload();
+          });
+          // patch $.getJSON
+          (function(f) {
+            $.getJSON = function(path, args, callback) {
+              if (typeof args == 'function') {
+                callback = args;
+                args = undefined;
+              }
+              if (socket.connected) {
+                let id = Math.random();
+                cb[id] = callback;
+                socket.emit('message', {
+                  'id'     : id
+                , 'method' : 'GET'
+                , 'path'   : /^\//.test(path) ? path : window.location.pathname + path
+                , 'args'   : args
+                });
+              } else {
+                f(path, args, callback);
+              }
+            };
+          })($.getJSON);
+        });
+      })();
+    </script>
+    <script src="/js/lib/jquery.min.js"></script>
+    <script src="/js/lib/bootstrap.bundle.min.js"></script>
+    <div class="container-fluid">
+      <!--<link href='//fonts.googleapis.com/css?family=Ubuntu+Mono&subset=latin,cyrillic-ext,cyrillic' rel='stylesheet' type='text/css'>-->
+<style>
+  #content FORM.well {
+    -padding : 0;
+    -margin : 0;
+    -background: none;
+    -background-color:#fff;
+  }
+
+  #content FORM.well > * {
+    -background-color: none;
+  }
+
+  .auto-hint {
+    /*color: #C0C0C0;*/
+  }
+
+  .input-text {
+     font-family: 'Ubuntu Mono',sans-serif;
+     font-size:1rem;
+     line-height: 1.5;
+     width: 100%;
+  }
+
+  .chevron-conteiner{
+    display: inline-block;
+    margin: 0px;
+    padding: 0px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .chevron-conteiner-down{
+    display: inline-block;
+    margin: 0px;
+    padding: 0px;
+    width: 16px;
+    height: 16px;
+    transform: rotate(90deg) ;
+    transform-origin: 30% 70%;
+  }
+
+  .tooltip.left .tooltip-inner {
+    background-color: #f00;
+  }
+  .tooltip.left .tooltip-arrow {
+    border-left-color:  #f00;
+  }
+  input.plan_name {
+    display: block;
+    width: 250px;
+    /*height: 20px;*/
+    font-family : 'Consolas', 'Lucida Console';
+  }
+  button.plan_name {
+    height: 28px;
+    width: 28px;
+    display: inline-block;
+    padding:2px 2px 3px 3px;
+  }
+
+  .no-border {
+    border: 0;
+  }
+  .title_bar{
+      font-family:'Ubuntu Mono', Consolas, 'monospace';
+      padding:8px;
+      margin-bottom:4px;
+      border:1px solid #808080;
+      border-radius:2px;
+      background-color:#6080A0;
+      color:#F0F0F0;
+  }
+  a.arch_link{
+    margin-right:8px!important;
+    color:#6080a0;
+    white-space:nowrap;
+    text-decoration:underline dotted;
+  }
+</style>
+
+<div id="content">
+  <form id="plan_form" class="border" action="/explain"  style="margin-top: 20px" method="post" onsubmit="checkForm()" >
+      <div class="card bg-light no-border" >
+         <div class="card-header d-flex justify-content-between w-100 no-border py-2"  >
+           <div class="d-flex flex-row w-75">
+              <h6 style="margin:8px 10px 0px 10px; white-space: nowrap; ">
+                Explain / Explain Analyze
+              </h6>
+              <input id="name" name="name" type="text" pattern="[^<^>.]+" maxlength="256" placeholder="имя плана в архиве..." class="form-control plan_name">
+              <h6 style="margin: 8px 10px 0px 10px; color:#6080a0;">Copy&Paste or Drag'n'Drop &darr;</h6>
+              <input id="parent" name="parent" type="text" class="form-control" style="display: none;">
+              <input id="group" name="group" type="text"  class="form-control" style="display: none;">
+              <div id = "parent_cont" style="margin-left: 10px; padding: 4px;">
+              </div>
+           </div>
+          <div class="d-flex justify-content-end w-25 ">
+              <a href="/archive/" class="m-1 arch_link" >публичный архив</a>
+              <select class="form-control col-sm-8" id="examples"  onchange="fillExample(this.value)">
+                  <option selected>Sample Plans...</option>
+                  <option value=1 >-- Только алгоритм (COSTS OFF)</option>
+                  <option value=2 >-- С кавычками из pgAdmin (ANALYZE)</option>
+                  <option value=3 >-- JSON-формат</option>
+                  <option value=4 >-- Прямо из лога с запросом</option>
+                  <option value=5 >-- Из psql с заголовком</option>
+                  <option value=6 >-- Из "узкой" консоли</option>
+                </select>
+          </div>
+        </div>
+
+        <div id="plan_txt" class="card-body no-border">
+          <span style="color:#A0A0A0">для получения информации о распределении данных в памяти и времени работы с диском используйте</span><br>
+            <div class="title_bar" >
+                SET <a href="https://www.postgresql.org/docs/current/runtime-config-statistics.html#GUC-TRACK-IO-TIMING" style="text-decoration: underline dotted;color:#F0F0F0" target="_blank">track_io_timing</a> = TRUE; <a href="https://www.postgresql.org/docs/current/sql-explain.html" style="text-decoration: underline dotted;color:#F0F0F0" target="_blank">EXPLAIN</a> (ANALYZE, BUFFERS) { SELECT | INSERT | UPDATE | DELETE } …
+            </div>
+<!--          <span style="font-family:Lucida Console; color:#A0A0A0">SET track_io_timing = TRUE; EXPLAIN (ANALYZE, BUFFERS) { SELECT | INSERT | UPDATE | DELETE } &hellip;</span>-->
+          <textarea class="form-control input-text" name="plan" id="plan" cols="160" rows="25" required></textarea>
+        </div>
+      </div>
+      <div class="accordion" id="accordion">
+      <div class="card no-border">
+        <div class="card-header no-border py-2" id="heading2">
+          <h5 class="mb-0">
+            <a data-toggle="collapse" href="#collapse2" onclick="chevron_rotate()"><div id = "chevron-conteiner" class="chevron-conteiner">
+                <svg width="15" height="15" viewBox="0 0 1792 1792" fill="#08c"  xmlns="//www.w3.org/2000/svg"
+                     style="vertical-align: middle;display: inline;">
+                  <path d="M1363 877l-742 742q-19 19-45 19t-45-19l-166-166q-19-19-19-45t19-45l531-531-531-531q-19-19-19-45t19-45l166-166q19-19 45-19t45 19l742 742q19 19 19 45t-19 45z"/></svg>
+              </div>
+              Исходный запрос </a>
+          </h5>
+        </div>
+         <div class="card bg-light no-border">
+            <div id="collapse2" class="collapse bg-light"  aria-labelledby="heading2" data-parent="#accordion">
+              <div id="query_txt" class="card-body">
+                <!--<legend>Текст запроса</legend>-->
+                <textarea class="form-control input-text" id="query" name="query" cols="160" rows="25" ></textarea>
+              </div>
+              <div id="params_txt" class="card-body">
+                <!--<legend>Параметры запроса</legend>-->
+                <textarea class="form-control input-text" id="params" name="params" cols="160" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between bg-light px-md-4 py-2">
+          <div class="form-group form-check pt-1 pl-3">
+             <input type="checkbox" value="true"  class="form-check-input" name = "private" id = "private">
+             <label class="form-check-label" for="private">  не публиковать в архиве</label>
+             <input type="hidden" name ="private_pnt" id = "private_pnt">
+          </div>
+          <div class="form-group">
+            <button  id = 'SendFrom' type="submit" class="btn btn-primary" data-toggle="tooltip" data-placement="left" data-html="true" title="" >
+              Explain It!
+            </button>
+          </div>
+        </div>
+      </div>
+  </form>
+</div>
+
+<script>
+  let parent = null
+    , group =  null
+    , private = null
+    , dt_pr = null
+    , form = $('#plan_form');
+// console.log('parent =>',parent,'group');
+  function chevron_rotate() {
+    $('#chevron-conteiner').toggleClass("chevron-conteiner-down");
+  }
+
+  function checkForm(e) {
+// console.log('checkForm(e)==>',e) ;
+    if ($('#plan').val().length==0){
+      $('#SendFrom').attr('data-original-title',"<span style='font-weight: 400;font-size: larger;'>Поле с планом не может быть пустым!</span>").tooltip('fixTitle').tooltip('show');
+      setTimeout( ()=>{
+        $('#SendFrom').tooltip('hide');
+      }, 1000);
+      $('#SendFrom').attr('data-original-title',"").tooltip('fixTitle');
+      return false;
+      e.cancelBubble=true;
+    } else {
+      return true;
+    }
+  }
+
+  function fillExample(chose){
+    let example_str = '';
+    switch (+chose){
+      case 1:
+        example_str =
+                `Index Scan using pg_class_oid_index on pg_class
+  Index Cond: (oid = '1259'::oid)` ;
+        break;
+      case 2:
+        example_str =
+                `"Index Scan using pg_class_oid_index on pg_class  (cost=0.28..2.50 rows=1 width=725) (actual time=0.026..0.027 rows=1 loops=1)"
+"  Index Cond: (oid = '1259'::oid)"
+"  Buffers: shared hit=3"
+"Planning time: 0.156 ms"
+"Execution time: 0.072 ms"` ;
+        break;
+      case 3:
+        example_str =
+                `[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Parallel Aware": false,
+      "Scan Direction": "Forward",
+      "Index Name": "pg_class_oid_index",
+      "Relation Name": "pg_class",
+      "Alias": "pg_class",
+      "Startup Cost": 0.28,
+      "Total Cost": 2.50,
+      "Plan Rows": 1,
+      "Plan Width": 725,
+      "Actual Startup Time": 0.008,
+      "Actual Total Time": 0.009,
+      "Actual Rows": 1,
+      "Actual Loops": 1,
+      "Index Cond": "(oid = '1259'::oid)",
+      "Rows Removed by Index Recheck": 0
+    },
+    "Planning Time": 0.112,
+    "Triggers": [
+    ],
+    "Execution Time": 0.036
+  }
+]` ;
+        break;
+      case 4:
+        example_str =
+                `\tQuery Text: explain analyze
+\tSELECT
+\t\t*
+\tFROM
+\t\tpg_class
+\tWHERE
+\t\trelname = 'мама
+\tмыла
+\tраму';
+\tIndex Scan using pg_class_relname_nsp_index on pg_class  (cost=0.29..2.54 rows=1 width=265) (actual time=0.014..0.014 rows=0 loops=1)
+\t  Index Cond: (relname = 'мама
+\tмыла
+\tраму'::name)
+\t  Buffers: shared hit=2
+` ;
+        break;
+      case 5:
+        example_str =
+                `                                                          QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------
+Index Scan using pg_class_oid_index on pg_class  (cost=0.27..8.29 rows=1 width=265) (actual time=0.011..0.012 rows=1 loops=1)
+  Index Cond: (oid = '1259'::oid)
+Planning Time: 30.286 ms
+Execution Time: 0.089 ms
+(4 rows)
+` ;
+        break;
+      case 6:
+        example_str =
+                `                                                          QUERY PLAN
+--------------------------------------------------------------------
+-----------------------------------------------------------
+Index Scan using pg_class_oid_index on pg_class  (cost=0.27..8.29 r
+ows=1 width=265) (actual time=0.011..0.012 rows=1 loops=1)
+  Index Cond: (oid = '1259'::oid)
+` ;
+        break;
+
+    }
+
+    $('#plan').val(example_str);
+  }
+
+  function dropfile(trg,file) {
+    let reader = new FileReader();
+    reader.onload = function(e) {
+      trg.value = e.target.result;
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  function clearParent(){
+    parent ='';
+    $('#parent').val('');
+    $('#group').val('');
+    $('#parent_cont').empty();
+    $('#private').prop("disabled", false);
+  }
+  const loader = setInterval(function() {
+    if (window.$ !== undefined) {
+      clearInterval(loader);
+
+      $(document).ready(function($) {
+         let placeholder =                 `                                                           QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------
+Limit  (cost=0.28..2.49 rows=1 width=359) (actual time=0.008..0.009 rows=1 loops=1)
+  Buffers: shared hit=3
+  ->  Index Scan using pg_class_oid_index on pg_class  (cost=0.28..2.49 rows=1 width=359) (actual time=0.006..0.006 rows=1 loops=1)
+        Index Cond: (oid = '1259'::oid)
+        Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=148 read=13
+  I/O Timings: read=22.473
+Planning Time: 23.242 ms
+Execution Time: 0.060 ms
+(10 rows)
+`,
+                placeholder_q = 'SELECT * FROM table t WHERE t.a = $1;',
+                placeholder_p = '$1 = \'xxx\', $2 = \'yyy\'';
+        $('#plan').attr('placeholder', placeholder);
+        $('#query').attr('placeholder', placeholder_q);
+        $('#params').attr('placeholder', placeholder_p);
+
+        // placeholder
+        $('INPUT.auto-hint, TEXTAREA.auto-hint').focus(function() {
+          if($(this).val() == $(this).attr('data-hint')){
+            $(this).val('');
+            $(this).removeClass('auto-hint');
+          }
+        });
+        $('INPUT.auto-hint, TEXTAREA.auto-hint').blur(function() {
+          if($(this).val() == '' && $(this).attr('data-hint') != '') {
+            $(this).val($(this).attr('data-hint'));
+            $(this).addClass('auto-hint');
+          }
+        });
+        $('INPUT.auto-hint, TEXTAREA.auto-hint').each(function() {
+          if($(this).attr('data-hint') == '') {
+            return;
+          }
+          if($(this).val() == '') {
+            $(this).val($(this).attr('data-hint'));
+          }
+          else {
+            $(this).removeClass('auto-hint');
+          }
+        });
+        if (parent) {
+          $('#parent').val(parent);
+          $('#group').val(group);
+          let parent_str = `<span style='margin-right: 3px;'>связать с  : <a href="/archive/explain/${parent}:0:${dt_pr}">${parent}</a></span>
+        <span style="cursor: pointer;" >
+            <i class="icon-remove"  onclick="clearParent()"></i>
+        </span>`;
+          $('#parent_cont').html(parent_str);
+        }
+        $('#plan').focus();
+// console.log("$('#plan').val().length ",$('#plan').val().length);
+        $('#plan').keypress(function(e) {
+          if (e.ctrlKey && (e.keyCode === 10 || e.keyCode === 13)) {
+            e.preventDefault();
+            form.submit();
+          }
+        });
+        $('#plan')[0].ondrop = function(e) {
+          this.value = "";
+          e.preventDefault();
+          let file = e.dataTransfer.files[0];
+          dropfile(e.target,file);
+        };
+        $('#query')[0].ondrop = function(e) {
+          this.value = "";
+          e.preventDefault();
+          let file = e.dataTransfer.files[0];
+          dropfile(e.target,file);
+        };
+
+        $('#query').keypress(function(e) {
+          if (e.ctrlKey && (e.keyCode === 10 || e.keyCode === 13)) {
+            e.preventDefault();
+            form.submit();
+          }
+        });
+        $('#params').keypress(function(e) {
+          if (e.ctrlKey && (e.keyCode === 10 || e.keyCode === 13)) {
+            e.preventDefault();
+            form.submit();
+          }
+        });
+
+        if (private) {
+          $('#private').prop("checked", true);
+          $('#private_pnt').val(true);
+        }
+        if (parent) {
+          $('#private').prop("disabled", true);
+        }
+      });
+    }
+  }, 0);
+</script>
+
+    </div>
+  </body>
+  <script src="/js/lib/bootstrap-datepicker.js"></script>
+  <script src="/js/lib/bootstrap.bundle.min.js"></script>
+
+  <script>
+    "use strict";
+    $(document).ready(function($) {
+      $('#donate').popover({
+                             html : true
+                            ,sanitize: false
+                            ,content: `<div class="d-flex flex-row " style="text-align: center; width: 510px;">
+                                            <div class="d-block p-2" >
+                                                <img width = "100px" src="/img/qr-code1.png"/>
+                                            </div>
+                                            <div class="d-block" style="text-align: left; justify-content: center;" >
+                                                <span class="donate-txt" > ${transMsg("Мы развиваем проект, чтобы работа с PostgreSQL была еще удобнее, и будем рады вашей помощи.")}</span>
+<div class="d-flex flex-row justify-content-end" style="margin-top: 0" >
+                                                <a class="btn btn-danger mt-3" role="button" aria-pressed="true" href="https://pay.cloudtips.ru/p/4410bda2" target="_blank" style="background: #E04000;">${transMsg("внести свой вклад")}</a>
+</div>
+                                            </div>
+                                       </div>`
+                            ,placement: 'bottom'
+                            ,container: $('#donate')
+                            ,trigger  : "hover"
+                            ,delay    : {
+                                          "show":100
+                                         ,"hide":1000
+                                        }
+                          });
+      /*
+                                  ,content: `<div class="d-flex flex-row " style="text-align: center; width: 510px;">
+                                            <div class="d-block" >
+                                                <img src="/img/qr-donate.png"/>
+                                            </div>
+                                            <div class="d-block" style="text-align: left; justify-content: center;" >
+                                                <span class="donate-txt" > ${transMsg("Мы развиваем проект, чтобы работа с PostgreSQL была еще удобнее, и будем рады вашей помощи.")}</span>
+<div class="d-flex flex-row justify-content-between p-0" style="margin-top: 0" >
+                                                <a class="btn btn-danger mt-3" role="button" aria-pressed="true" href="https://capu.st/bill0b3682bb-6af6" target="_blank" style="background: #E04000;">${transMsg("внести свой вклад")}</a>
+                                                <a class="btn btn-danger mt-3" role="button" aria-pressed="true" href="https://capu.st/bill3d6afe2d-fc86" target="_blank" style="background: #E04000;">${transMsg("подписаться")}</a>
+</div>
+                                            </div>
+                                            <div class="d-block" style="margin-left: 3px;" >
+                                                <img src="/img/qr-subscr.png"/>
+                                            </div>
+                                       </div>`
+
+       */
+      let hash = window.location.hash
+      if (hash){
+        let location_hash = hash.indexOf(':')>=0? hash.substring(0,hash.indexOf(':')):hash;
+        $(`#tabs a[href="${location_hash}"]`).tab('show');
+      }
+      $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(window.history.state, "", e.target.hash);
+        }
+      });
+      $(window).bind('hashchange', function() {
+        let hash = window.location.hash
+        let location_hash = hash.indexOf(':')>=0? hash.substring(0,hash.indexOf(':')):'';
+        $(`#tabs a[href="${location_hash}"]`).tab('show');
+      });
+      let href = '/' + (window.location.pathname.split('/')[1] || 'plan');
+      if(href == '/archive'){
+        $('#dtpc').show();
+      } else {
+        $('#dtpc').hide();
+      }
+      $('UL.navbar-nav').find('a[href^="' + href + '/"].nav-link').parent('LI').toggleClass('active');
+    });
+
+ </script>
+  <script src="/js/dash-timeline.js"></script>
+  <script type="text/javascript" src="/js/async.js"></script>
+</html>
