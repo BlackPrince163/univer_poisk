@@ -69,6 +69,7 @@ if __name__ == "__main__":
         "~технический & войти",
         "технический & ~войти",
         "технический | ~войти",
+        "(технический | ~войти) & поддержка & количество"
     ]
     for string in search_strings:
         print(boolean_search.searh(string))
